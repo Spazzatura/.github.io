@@ -1473,9 +1473,17 @@ function handleSp(card,who,all){
     }
   }
   if(card.value===9){
-    G.skipNext=1;
-    const si=(who+1)%N;
-    addLog(`⏭️ 9のカード！${si===0?'あなた':CPU[si-1]}のターンをスキップ`);
+    // 複数枚の9を重ね掛け: 出した枚数分スキップ
+    const nineCount=all.filter(c=>c.value===9).length;
+    G.skipNext=nineCount;
+    // スキップされるプレイヤーをログに表示
+    const skipped=[];
+    let t=(who+1)%N;
+    for(let s=0;s<nineCount;s++){
+      skipped.push(t===0?'あなた':CPU[t-1]);
+      t=(t+1)%N;
+    }
+    addLog(`⏭️ 9のカード×${nineCount}！${skipped.join('・')}のターンをスキップ`);
   }
   afterPlay(who);
 }
