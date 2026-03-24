@@ -1,0 +1,2096 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>🃏 ドボン</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --gold:#d4a843;--gold-l:#f0c85a;
+  --cw:70px;--ch:100px;
+  --p0:#ffffff;   /* player: white */
+  --p1:#bfdbfe;   /* cpu-a: blue */
+  --p2:#bbf7d0;   /* cpu-b: green */
+  --p3:#fde68a;   /* cpu-c: yellow */
+  --p0b:#1e40af;  /* player border accent */
+  --p1b:#2563eb;
+  --p2b:#16a34a;
+  --p3b:#ca8a04;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{background:#0a1f12;background-image:radial-gradient(ellipse at 50% 40%,#1a4a2e 0%,#061008 100%);min-height:100vh;font-family:'Noto Sans JP',sans-serif;color:#f0ece0;overflow-x:hidden;user-select:none;overscroll-behavior:none;}
+#app{display:flex;flex-direction:column;max-width:640px;margin:0 auto;padding:4px 6px;gap:3px;min-height:100vh;overscroll-behavior:none;}
+
+/* ── SETUP ── */
+#setup{position:fixed;inset:0;z-index:300;background:radial-gradient(ellipse at 50% 40%,#1e5c38 0%,#030a05 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:32px;}
+#setup h1{font-family:'Cinzel',serif;font-size:48px;color:var(--gold);letter-spacing:6px;text-shadow:0 0 50px rgba(212,168,67,.7);}
+.setup-note{color:rgba(255,255,255,.4);font-size:12px;letter-spacing:1px;}
+.cnt-row{display:flex;gap:16px;}
+.cnt-btn{width:72px;height:72px;border-radius:14px;border:2px solid rgba(212,168,67,.3);background:rgba(0,0,0,.5);color:var(--gold-l);font-size:22px;font-weight:900;font-family:inherit;cursor:pointer;transition:.2s;}
+.cnt-btn:hover,.cnt-btn.on{background:var(--gold);color:#1a1a2e;border-color:var(--gold);transform:scale(1.1);box-shadow:0 0 24px rgba(212,168,67,.5);}
+.go-btn{padding:15px 56px;border-radius:14px;border:none;background:linear-gradient(135deg,var(--gold),#a06800);color:#1a1a2e;font-size:18px;font-weight:900;font-family:inherit;cursor:pointer;box-shadow:0 4px 28px rgba(212,168,67,.55);letter-spacing:2px;transition:.15s;}
+.go-btn:hover{transform:translateY(-2px);}
+.go-btn:disabled{opacity:.3;cursor:not-allowed;transform:none;}
+.deck-opt{display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 18px;border-radius:12px;border:2px solid rgba(212,168,67,.2);background:rgba(0,0,0,.3);transition:.2s;}
+.deck-opt:hover{border-color:rgba(212,168,67,.5);background:rgba(0,0,0,.5);}
+.deck-opt input[type=checkbox]{width:20px;height:20px;accent-color:var(--gold);cursor:pointer;}
+.deck-opt-lbl{display:flex;flex-direction:column;gap:2px;}
+.deck-opt-lbl span:first-child{font-size:14px;font-weight:700;color:var(--gold-l);}
+.deck-opt-lbl span:last-child{font-size:10px;color:rgba(255,255,255,.4);}
+
+/* ── HEADER ── */
+#hdr{display:flex;align-items:center;justify-content:flex-start;padding:3px 10px;background:rgba(0,0,0,.4);border-radius:10px;border:1px solid rgba(212,168,67,.25);flex-shrink:0;}
+#hdr-title{font-family:'Cinzel',serif;font-size:18px;color:var(--gold);letter-spacing:2px;}
+#scoreboard{display:flex;flex-direction:column;gap:4px;background:rgba(0,0,0,.3);border-radius:10px;border:1px solid rgba(212,168,67,.15);padding:6px 8px;min-width:64px;justify-content:center;}
+.si{text-align:center;min-width:40px;padding:2px 5px;border-radius:6px;transition:.3s;}
+.si.active{background:rgba(212,168,67,.18);}
+.si-lbl{font-size:9px;color:rgba(255,255,255,.4);letter-spacing:.5px;display:block;}
+.si-val{font-size:15px;font-weight:900;color:var(--gold-l);}
+.si.active .si-lbl{color:var(--gold);}
+.si.active .si-val{color:#fff;}
+
+/* ── OPPONENT ROW ── */
+.orow{border-radius:8px;padding:3px 8px;border:1px solid rgba(255,255,255,.07);flex-shrink:0;}
+.orow-p1{background:rgba(30,64,175,.12);}
+.orow-p2{background:rgba(22,163,74,.1);}
+.orow-p3{background:rgba(202,138,4,.1);}
+.olbl{font-size:10px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-bottom:4px;display:flex;align-items:center;gap:5px;}
+.tdot{width:7px;height:7px;border-radius:50%;background:var(--gold);display:none;box-shadow:0 0 8px var(--gold);}
+.is-turn .tdot{display:inline-block;}
+.ohand{display:flex;gap:3px;flex-wrap:wrap;min-height:62px;align-items:center;}
+
+/* ── TABLE CENTER ── */
+#tbl-row{display:flex;gap:6px;align-items:stretch;flex-shrink:0;}
+#tbl{display:flex;align-items:center;justify-content:center;gap:18px;padding:8px 8px;background:radial-gradient(ellipse at center,rgba(35,92,56,.45) 0%,rgba(6,16,8,.1) 100%);border-radius:14px;border:2px solid rgba(212,168,67,.1);position:relative;min-height:100px;flex:1;}
+.pile-wrap{display:flex;flex-direction:column;align-items:center;gap:5px;}
+.pile-lbl{font-size:9px;color:rgba(255,255,255,.3);letter-spacing:1px;text-align:center;}
+#deck{width:var(--cw);height:var(--ch);background:linear-gradient(135deg,#1a237e,#283593);border-radius:7px;border:2px solid rgba(255,255,255,.2);box-shadow:3px 4px 14px rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;font-size:26px;cursor:pointer;transition:.15s;position:relative;}
+#deck:hover{transform:translateY(-3px);box-shadow:3px 8px 18px rgba(0,0,0,.7);}
+#deck:active{transform:scale(.96);}
+#deck.off{opacity:.3;cursor:not-allowed;transform:none!important;}
+#dspile{width:var(--cw);height:var(--ch);position:relative;}
+#stk-badge{display:none;position:absolute;top:-8px;right:-8px;background:#ef4444;color:#fff;font-size:10px;font-weight:900;width:22px;height:22px;border-radius:50%;align-items:center;justify-content:center;}
+#stk-badge.on{display:flex;}
+#turn-ind{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--gold);color:#1a1a2e;font-size:10px;font-weight:900;padding:2px 12px;border-radius:10px;letter-spacing:1px;white-space:nowrap;}
+
+/* suit display */
+#suit-box{display:flex;flex-direction:column;align-items:center;gap:3px;}
+#suit-sym{font-size:32px;filter:drop-shadow(0 0 8px rgba(255,255,255,.35));transition:.3s;}
+#suit-lbl{font-size:9px;color:rgba(255,255,255,.3);}
+
+/* last-played-by strip */
+#last-by{position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);font-size:9px;padding:1px 9px;border-radius:8px;white-space:nowrap;font-weight:700;}
+
+/* ── STATUS ── */
+#status{text-align:center;padding:4px 10px;background:rgba(0,0,0,.3);border-radius:9px;font-size:13px;font-weight:700;color:var(--gold-l);min-height:28px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(212,168,67,.17);transition:.3s;flex-shrink:0;}
+#status.warn{color:#f87171;border-color:rgba(248,113,113,.4);}
+#status.ok{color:#4ade80;border-color:rgba(74,222,128,.4);}
+
+/* drew hint */
+#drew-hint{display:none;text-align:center;font-size:11px;padding:3px 10px;background:rgba(29,78,216,.2);border-radius:6px;color:#93c5fd;border:1px solid rgba(96,165,250,.2);flex-shrink:0;}
+#drew-hint.on{display:block;}
+
+/* ── PLAYER HAND ── */
+#parea{background:rgba(0,0,0,.2);border-radius:10px;padding:5px 8px;border:1px solid rgba(255,255,255,.07);flex-shrink:0;}
+#plbl{font-size:10px;color:rgba(255,255,255,.4);margin-bottom:5px;letter-spacing:1px;display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+#sort-select{
+  margin-left:auto;
+  background:rgba(0,0,0,.4);
+  color:rgba(255,255,255,.7);
+  border:1px solid rgba(255,255,255,.15);
+  border-radius:6px;
+  font-size:10px;
+  font-family:inherit;
+  padding:2px 5px;
+  cursor:pointer;
+  outline:none;
+}
+#sort-select:focus{border-color:var(--gold);}
+#sort-select option{background:#0a1f12;color:#fff;}
+#phand{display:flex;gap:4px;flex-wrap:wrap;min-height:76px;align-items:flex-end;padding-top:16px;padding-bottom:20px;}
+
+/* ── CARD ── */
+.card{
+  width:var(--cw);height:var(--ch);
+  border-radius:7px;border:2px solid rgba(0,0,0,.18);
+  box-shadow:2px 4px 8px rgba(0,0,0,.55);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  position:relative;cursor:pointer;transition:transform .15s,box-shadow .15s;
+  flex-shrink:0;overflow:hidden;
+}
+/* player colors */
+.card.pc0{background:var(--p0);}
+.card.pc1{background:var(--p1);}
+.card.pc2{background:var(--p2);}
+.card.pc3{background:var(--p3);}
+/* suit colors */
+.card.red .cr{color:#b91c1c;}
+.card.red .cs{color:#b91c1c;}
+.card.black .cr{color:#0f172a;}
+.card.black .cs{color:#0f172a;}
+.card.joker .cr,.card.joker .cs{color:#7c2d12;}
+.card.joker{background:linear-gradient(135deg,#fef08a,#fdba74);}
+/* rank & suit */
+.cr{font-size:22px;font-weight:900;line-height:1;}
+.cs{font-size:28px;line-height:1;}
+/* corner labels */
+.cc{position:absolute;font-size:11px;font-weight:900;line-height:1.1;display:flex;flex-direction:column;align-items:center;}
+.cc.tl{top:3px;left:4px;}
+.cc.br{bottom:3px;right:4px;transform:rotate(180deg);}
+/* states */
+.card.playable:hover{box-shadow:2px 12px 20px rgba(0,0,0,.65);}
+
+/* ── 出せるカード: カード全体が金色に点滅 ── */
+.card.playable{
+  animation:card-gold 0.7s infinite;
+  border:2px solid #b45309 !important;
+}
+@keyframes card-gold{
+  0%,100%{background:#fbbf24;box-shadow:0 0 14px 4px rgba(251,191,36,0.7);}
+  50%{background:#fef08a;box-shadow:0 0 28px 10px rgba(254,240,138,1);}
+}
+/* 金色カードのスーツ文字は濃い色を維持 */
+.card.playable.red .cr,.card.playable.red .cs{color:#7f1d1d;}
+.card.playable.black .cr,.card.playable.black .cs{color:#1e1b4b;}
+.card.playable.joker .cr,.card.playable.joker .cs{color:#7c2d12;}
+
+/* ── ドボンできるカード: カード全体が赤く点滅 ── */
+.card.dobon-alert{
+  animation:card-red 0.5s infinite;
+  border:2px solid #7f1d1d !important;
+}
+@keyframes card-red{
+  0%,100%{background:#ef4444;box-shadow:0 0 14px 5px rgba(239,68,68,0.8);}
+  50%{background:#fecaca;box-shadow:0 0 32px 14px rgba(252,165,165,1);}
+}
+/* 赤カードの文字色 */
+.card.dobon-alert .cr,.card.dobon-alert .cs{color:#1a1a2e !important;}
+/* ドボン優先（ドボン > 出せる）*/
+.card.dobon-alert{animation:card-red 0.5s infinite !important;}
+
+/* ── 場のカード（ドボン時）赤く点滅 ── */
+#ds-top.dobon-field{
+  animation:card-red 0.5s infinite;
+  border:3px solid #7f1d1d !important;
+}
+
+/* 選択済み */
+.card.sel{transform:translateY(-12px) !important;box-shadow:0 0 18px 4px rgba(34,197,94,.7) !important;border:3px solid #22c55e !important;}
+/* 選択済み+出せる → 緑枠を優先 */
+.card.sel.playable{animation:none;background:var(--p0);}
+.card.sel.dobon-alert{animation:card-red 0.5s infinite !important;border:3px solid #7f1d1d !important;}
+.card.sel.playable.pc1{background:var(--p1);}
+.card.sel.playable.pc2{background:var(--p2);}
+.card.sel.playable.pc3{background:var(--p3);}
+.card.sel.playable.joker{background:linear-gradient(135deg,#fef08a,#fdba74);}
+.card.sel.playable .cr,.card.sel.playable .cs{color:inherit;}
+.card.sel.playable.red .cr,.card.sel.playable.red .cs{color:#b91c1c;}
+.card.sel.playable.black .cr,.card.sel.playable.black .cs{color:#0f172a;}
+/* 選択順バッジ */
+.sel-badge{
+  position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);
+  background:#22c55e;color:#fff;font-size:11px;font-weight:900;
+  width:20px;height:20px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 2px 6px rgba(0,0,0,.5);
+  border:2px solid #fff;
+  z-index:10;pointer-events:none;
+}
+/* card back */
+/* CPU カード裏面 */
+.cback{width:42px;height:60px;border-radius:6px;border:1.5px solid rgba(255,255,255,.18);box-shadow:1px 2px 5px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.cback.pc1b{background:linear-gradient(135deg,#1e3a8a,#1e40af);}
+.cback.pc2b{background:linear-gradient(135deg,#14532d,#166534);}
+.cback.pc3b{background:linear-gradient(135deg,#713f12,#92400e);}
+/* CPU シンプルカード（表面・公開時） */
+.ccard{width:42px;height:60px;border-radius:6px;border:1.5px solid rgba(0,0,0,.2);box-shadow:1px 2px 5px rgba(0,0,0,.5);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0px;flex-shrink:0;background:#fff;}
+.ccard.cc-red{background:#fff;color:#b91c1c;}
+.ccard.cc-black{background:#fff;color:#0f172a;}
+.ccard.cc-joker{background:linear-gradient(135deg,#fef08a,#fdba74);color:#7c2d12;}
+.ccard-sym{font-size:28px;line-height:1.1;}
+.ccard-rank{font-size:18px;font-weight:900;line-height:1;}
+#ds-top{position:absolute;top:0;left:0;animation:cdrop .22s ease-out;}
+@keyframes cdrop{from{transform:translateY(-20px) scale(.87);opacity:0}to{transform:none;opacity:1}}
+
+/* ── ACTIONS ── */
+#acts{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;flex-shrink:0;}
+.btn{padding:7px 13px;border-radius:8px;border:none;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:.15s;letter-spacing:.5px;}
+.btn:active{transform:scale(.95);}
+.btn-play{background:linear-gradient(135deg,#15803d,#166534);color:#fff;border:1px solid rgba(74,222,128,.4);box-shadow:0 2px 8px rgba(21,128,61,.4);}
+.btn-play:hover{background:linear-gradient(135deg,#16a34a,#15803d);}
+.btn-draw{background:linear-gradient(135deg,#1d4ed8,#1e40af);color:#fff;border:1px solid rgba(96,165,250,.35);box-shadow:0 2px 8px rgba(29,78,216,.4);}
+.btn-draw:hover{background:linear-gradient(135deg,#2563eb,#1d4ed8);}
+.btn-pass{background:rgba(255,255,255,.07);color:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.13);}
+.btn-dobon{background:linear-gradient(135deg,#b91c1c,#991b1b);color:#fff;border:1px solid rgba(248,113,113,.4);position:relative;overflow:hidden;}
+.btn-dobon.live{animation:bpr 1s infinite;}
+@keyframes bpr{0%,100%{box-shadow:0 2px 8px rgba(185,28,28,.4)}50%{box-shadow:0 4px 20px rgba(248,113,113,.8)}}
+.btn-dobon .dtimer{
+  position:absolute;bottom:0;left:0;height:3px;background:#fca5a5;
+  transition:width 1s linear;
+}
+.btn:disabled{opacity:.25;cursor:not-allowed;animation:none;}
+
+/* ── SUIT PICKER ── */
+/* Suit picker: bottom slide-up panel — does NOT cover the table */
+#spick{
+  display:none;position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:640px;
+  background:linear-gradient(to top,#0a1f12 60%,rgba(10,31,18,.95) 100%);
+  border-top:2px solid rgba(212,168,67,.5);
+  border-radius:20px 20px 0 0;
+  padding:16px 20px 28px;
+  z-index:100;
+  flex-direction:column;align-items:center;gap:12px;
+  box-shadow:0 -8px 40px rgba(0,0,0,.7);
+  transition:transform .3s ease;
+}
+#spick.on{display:flex;}
+#spick h3{font-family:'Cinzel',serif;color:var(--gold);font-size:16px;letter-spacing:1px;}
+#spick-note{font-size:12px;color:rgba(255,255,255,.55);text-align:center;max-width:300px;line-height:1.6;background:rgba(212,168,67,.08);padding:6px 12px;border-radius:8px;border:1px solid rgba(212,168,67,.2);}
+.spick-grid{display:flex;gap:14px;justify-content:center;}
+.scard{width:80px;height:88px;border-radius:14px;border:3px solid rgba(0,0,0,.15);background:#fff;font-size:38px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:.15s;box-shadow:2px 4px 10px rgba(0,0,0,.4);}
+.spick-hand-row{display:flex;flex-direction:column;gap:3px;}
+.spick-hand-lbl{font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;}
+.spick-hand-cards{display:flex;gap:3px;flex-wrap:wrap;align-items:center;}
+.scard:hover{transform:scale(1.12) translateY(-4px);box-shadow:2px 10px 22px rgba(0,0,0,.6);}
+
+/* ── OVERLAY ── */
+#ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:200;align-items:flex-start;justify-content:center;overflow-y:auto;}
+#ov-scroll{display:flex;flex-direction:column;align-items:center;gap:14px;padding:24px 16px 32px;min-height:100%;width:100%;max-width:500px;margin:0 auto;}
+.ov-sec-lbl{font-size:10px;letter-spacing:2px;color:rgba(255,255,255,.4);text-transform:uppercase;text-align:center;margin-bottom:4px;}
+.ov-player-block{width:100%;background:rgba(255,255,255,.05);border-radius:12px;padding:8px 12px;border:1px solid rgba(255,255,255,.1);}
+.ov-player-block.ov-winner{border-color:rgba(212,168,67,.5);background:rgba(212,168,67,.08);}
+.ov-player-block.ov-loser{border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.06);}
+.ov-player-name{font-size:11px;font-weight:700;color:rgba(255,255,255,.6);margin-bottom:6px;display:flex;align-items:center;gap:6px;}
+.ov-player-name .ov-badge{font-size:10px;padding:1px 7px;border-radius:8px;font-weight:900;}
+.ov-badge.win{background:var(--gold);color:#1a1a2e;}
+.ov-badge.lose{background:#ef4444;color:#fff;}
+.ov-player-cards{display:flex;gap:3px;flex-wrap:wrap;align-items:flex-end;}
+/* ドボンカード＋ポイントカード 横並び */
+#ov-cards-row{display:flex;align-items:center;justify-content:center;gap:12px;
+  background:rgba(255,255,255,.04);border-radius:14px;
+  border:1px solid rgba(255,255,255,.1);padding:12px 16px;}
+.ov-card-col{display:flex;flex-direction:column;align-items:center;gap:6px;}
+.ov-arrow{font-size:24px;color:rgba(255,255,255,.3);flex-shrink:0;}
+/* ドボンカード: 赤グロー */
+#ov-doboncard{display:flex;justify-content:center;}
+#ov-doboncard .card{
+  width:52px!important;height:74px!important;border-radius:6px!important;
+  box-shadow:0 0 16px 5px rgba(239,68,68,.65)!important;
+  border:3px solid #ef4444!important;
+}
+#ov-doboncard .card .cr{font-size:16px!important;}
+#ov-doboncard .card .cs{font-size:22px!important;}
+#ov-doboncard .card .cc{font-size:7px!important;}
+/* ポイントカード: 金グロー */
+#ov-ptcard{display:flex;justify-content:center;}
+#ov-ptcard .card{
+  width:52px!important;height:74px!important;border-radius:6px!important;
+  box-shadow:0 0 16px 5px rgba(212,168,67,.6)!important;
+  border:3px solid var(--gold)!important;
+}
+#ov-ptcard .card .cr{font-size:16px!important;}
+#ov-ptcard .card .cs{font-size:22px!important;}
+#ov-ptcard .card .cc{font-size:7px!important;}
+/* 全員手札カード */
+.ov-player-cards .card{
+  width:42px!important;height:60px!important;border-radius:5px!important;
+}
+.ov-player-cards .card .cr{font-size:13px!important;}
+.ov-player-cards .card .cs{font-size:17px!important;}
+.ov-player-cards .card .cc{font-size:7px!important;}
+.ov-dobon-eq{text-align:center;font-size:11px;color:rgba(255,255,255,.5);margin:4px 0 2px;}
+#ov.on{display:flex;}
+#ov-title{font-family:'Cinzel',serif;font-size:42px;font-weight:900;background:linear-gradient(135deg,var(--gold),var(--gold-l));-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-align:center;animation:popin .4s cubic-bezier(.175,.885,.32,1.275);}
+@keyframes popin{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+#ov-sub{font-size:14px;color:rgba(255,255,255,.7);text-align:center;line-height:1.9;max-width:300px;}
+#ov-pts{font-size:26px;font-weight:900;color:var(--gold-l);}
+#ov-label{font-size:11px;color:rgba(255,255,255,.45);letter-spacing:1px;text-align:center;}
+.ov-btn{padding:12px 32px;border-radius:11px;border:none;font-family:inherit;font-weight:900;cursor:pointer;font-size:14px;}
+.ov-next{background:linear-gradient(135deg,var(--gold),#a06800);color:#1a1a2e;box-shadow:0 4px 18px rgba(212,168,67,.5);}
+.ov-menu{background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.18);}
+
+/* ── INTERRUPT BANNER ── */
+#interrupt-banner{
+  display:none;flex-direction:column;gap:3px;
+  background:linear-gradient(135deg,rgba(234,179,8,.18),rgba(234,179,8,.08));
+  border:2px solid rgba(234,179,8,.6);
+  border-radius:10px;padding:6px 12px;flex-shrink:0;
+  animation:ibpulse 1s infinite;
+}
+#interrupt-banner.on{display:flex;}
+@keyframes ibpulse{0%,100%{border-color:rgba(234,179,8,.6)}50%{border-color:rgba(234,179,8,1);box-shadow:0 0 16px rgba(234,179,8,.4);}}
+#ib-top{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+#ib-msg{font-size:13px;font-weight:900;color:#fde047;letter-spacing:.5px;}
+#ib-timer-wrap{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+#ib-secs{font-size:20px;font-weight:900;color:#fde047;min-width:24px;text-align:center;}
+#ib-bar-outer{width:80px;height:6px;background:rgba(255,255,255,.15);border-radius:3px;overflow:hidden;}
+#ib-bar{height:100%;background:#fde047;border-radius:3px;transition:width 1s linear;}
+#ib-hint{font-size:11px;color:rgba(255,255,255,.55);}
+/* interrupt button */
+.btn-interrupt{
+  background:linear-gradient(135deg,#ca8a04,#a16207);
+  color:#fff;border:1px solid rgba(253,224,71,.5);
+  box-shadow:0 2px 10px rgba(202,138,4,.5);
+  animation:bpulse-y 1s infinite;
+}
+@keyframes bpulse-y{0%,100%{box-shadow:0 2px 10px rgba(202,138,4,.4)}50%{box-shadow:0 4px 20px rgba(253,224,71,.8)}}
+/* ── LOG ── */
+#log{background:rgba(0,0,0,.28);border-radius:7px;padding:3px 9px;max-height:48px;overflow-y:auto;border:1px solid rgba(255,255,255,.05);flex-shrink:0;}
+.le{font-size:11px;color:rgba(255,255,255,.4);line-height:1.8;}
+.le.imp{color:var(--gold-l);font-weight:700;}
+
+@media(max-width:400px){
+  :root{--cw:58px;--ch:84px;}
+  .cr{font-size:19px;}.cs{font-size:24px;}
+}
+
+/* ── モバイル（iPhone Safari）向け全体コンパクト ── */
+html.mobile body{overflow:hidden;}
+html.mobile #app{
+  position:fixed;top:0;left:0;right:0;
+  height:100svh;height:calc(var(--vh,1vh)*100);
+  min-height:unset;overflow:hidden;padding:2px 4px;gap:2px;
+  z-index:1;
+}
+html.mobile #hdr{display:none;}
+html.mobile{--cw:56px;--ch:80px;}
+html.mobile .cr{font-size:17px;}
+html.mobile .cs{font-size:22px;}
+html.mobile #hdr{padding:2px 8px;}
+html.mobile #hdr-title{font-size:14px;}
+html.mobile .orow{padding:2px 6px;}
+html.mobile .ohand{min-height:46px;gap:2px;}
+html.mobile .ccard{width:32px;height:46px;}
+html.mobile .ccard-sym{font-size:20px;}
+html.mobile .ccard-rank{font-size:13px;}
+html.mobile .cback{width:32px;height:46px;font-size:12px;}
+html.mobile #tbl-row{gap:4px;}
+html.mobile #tbl{padding:5px 5px;gap:12px;min-height:80px;}
+html.mobile #suit-sym{font-size:24px;}
+html.mobile #scoreboard{padding:4px 5px;gap:2px;min-width:52px;}
+html.mobile .si-val{font-size:12px;}
+html.mobile .si-lbl{font-size:8px;}
+html.mobile #log{max-height:36px;padding:2px 7px;}
+html.mobile .le{font-size:10px;line-height:1.6;}
+html.mobile #status{font-size:11px;padding:3px 8px;min-height:22px;}
+html.mobile #parea{padding:3px 6px;}
+html.mobile #plbl{font-size:9px;margin-bottom:2px;}
+html.mobile #phand{min-height:72px;padding-top:14px;padding-bottom:18px;gap:3px;}
+html.mobile #acts{gap:4px;}
+html.mobile .btn{padding:5px 10px;font-size:11px;}
+html.mobile .btn-dobon{padding:5px 10px;}
+html.mobile #drew-hint{font-size:10px;padding:2px 8px;}
+html.mobile #interrupt-banner{padding:4px 10px;gap:2px;}
+html.mobile #ib-msg{font-size:11px;}
+html.mobile #ib-hint{font-size:10px;}
+html.mobile .sel-badge{width:16px;height:16px;font-size:9px;bottom:-16px;}
+html.mobile #sort-select{font-size:9px;padding:1px 4px;}
+html.mobile .olbl{font-size:9px;}
+
+/* モバイル: マーク選択を全画面オーバーレイに */
+html.mobile #spick{
+  position:fixed;
+  top:0;left:0;right:0;
+  /* 広告エリアを避けて上側だけに表示 */
+  bottom:auto;
+  height:calc(var(--vh,1vh)*100);
+  transform:none;width:100%;max-width:100%;
+  border-radius:0;border:none;
+  background:rgba(10,31,18,.98);
+  align-items:center;justify-content:flex-start;
+  overflow-y:auto;
+  z-index:9999;
+  padding:16px 20px 24px;
+  gap:12px;
+}
+html.mobile #spick h3{font-size:18px;}
+html.mobile #spick-note{font-size:12px;}
+html.mobile .spick-grid{gap:12px;flex-wrap:wrap;}
+html.mobile .scard{width:68px;height:76px;font-size:30px;border-radius:10px;}
+html.mobile .scard div:last-child{font-size:10px !important;}
+html.mobile #spick-info{display:flex;flex-direction:column;gap:6px;width:100%;
+  background:rgba(0,0,0,.3);border-radius:10px;padding:8px 10px;
+  border:1px solid rgba(255,255,255,.1);}
+html.mobile #spick-field-row{gap:20px;justify-content:flex-start;}
+html.mobile #spick-cur-suit{font-size:28px;}
+/* 情報パネル内カード: 極小 */
+html.mobile #spick-info .card{width:28px!important;height:40px!important;border-radius:3px!important;}
+html.mobile #spick-info .cback{width:28px!important;height:40px!important;border-radius:3px!important;font-size:10px!important;}
+html.mobile #spick-info .card .cs{font-size:16px!important;line-height:1;}
+html.mobile #spick-info .card .cr{font-size:11px!important;font-weight:900;line-height:1;}
+html.mobile .spick-hand-lbl{font-size:9px;}
+html.mobile #spick-hands{overflow-y:visible;}
+
+/* モバイル: ラウンド終了画面 */
+html.mobile #ov-scroll{padding:12px 10px 20px;gap:8px;}
+html.mobile #ov-title{font-size:28px;}
+html.mobile #ov-sub{font-size:11px;}
+html.mobile .ov-sec-lbl{font-size:9px;}
+html.mobile .ov-player-block{padding:6px 8px;border-radius:8px;}
+html.mobile .ov-player-name{font-size:10px;margin-bottom:4px;}
+html.mobile #ov-cards-row{padding:8px 10px;gap:8px;border-radius:10px;}
+html.mobile .ov-arrow{font-size:18px;}
+html.mobile #ov-doboncard .card,
+html.mobile #ov-ptcard .card{
+  width:38px!important;height:54px!important;border-radius:5px!important;
+}
+html.mobile #ov-doboncard .card .cr,
+html.mobile #ov-ptcard .card .cr{font-size:12px!important;}
+html.mobile #ov-doboncard .card .cs,
+html.mobile #ov-ptcard .card .cs{font-size:16px!important;}
+html.mobile .ov-player-cards .card{width:30px!important;height:42px!important;border-radius:3px!important;}
+html.mobile .ov-player-cards .card .cr{font-size:10px!important;}
+html.mobile .ov-player-cards .card .cs{font-size:13px!important;}
+html.mobile .ov-player-cards .card .cr,
+html.mobile #ov-ptcard .card .cr{font-size:11px!important;}
+html.mobile .ov-player-cards .card .cs,
+html.mobile #ov-ptcard .card .cs{font-size:14px!important;}
+html.mobile .ov-player-cards .card .cc{font-size:6px!important;}
+html.mobile .ov-player-cards{gap:2px;}
+html.mobile .ov-dobon-eq{font-size:10px;}
+html.mobile #ov-pts{font-size:18px;}
+html.mobile .ov-btn{padding:8px 22px;font-size:12px;}
+</style>
+</head>
+<body>
+
+<!-- SETUP -->
+<div id="setup">
+  <h1>🃏 DOBON</h1>
+  <p class="setup-note">プレイヤー数を選択してください</p>
+  <div class="cnt-row">
+    <button class="cnt-btn" onclick="selCnt(2)">2人</button>
+    <button class="cnt-btn" onclick="selCnt(3)">3人</button>
+  </div>
+  <p class="setup-note" style="font-size:11px">あなた + CPU（1〜2体）</p>
+  <label class="deck-opt">
+    <input type="checkbox" id="double-deck-chk">
+    <div class="deck-opt-lbl">
+      <span>🃏 山札2倍（108枚）</span>
+      <span>手札の見当がつきにくくなります</span>
+    </div>
+  </label>
+  <button class="go-btn" id="go-btn" onclick="startGame()" disabled>ゲームスタート ▶</button>
+</div>
+
+<!-- MAIN -->
+<div id="app" style="display:none">
+  <div id="hdr">
+    <div id="hdr-title">🃏 DOBON</div>
+  </div>
+  <div id="opps"></div>
+  <div id="tbl-row">
+    <div id="tbl">
+      <div id="turn-ind">あなたのターン</div>
+      <div class="pile-wrap">
+        <div id="deck" onclick="doAction()">🂠
+          <div id="stk-badge">0</div>
+        </div>
+        <div class="pile-lbl">山札<br><span id="deck-cnt">0</span>枚</div>
+      </div>
+      <div class="pile-wrap">
+        <div id="dspile"></div>
+        <div class="pile-lbl">場のカード</div>
+      </div>
+      <div id="suit-box">
+        <div id="suit-sym">♠</div>
+        <div id="suit-lbl">現在のマーク</div>
+      </div>
+      <div id="last-by"></div>
+    </div>
+    <div id="scoreboard"></div>
+  </div>
+  <div id="log"><div class="le">ゲームログ...</div></div>
+  <div id="status">ゲーム開始！</div>
+  <div id="parea">
+    <div id="plbl">
+      <span class="tdot"></span>🙋 あなたの手札 (<span id="pcnt">0</span>枚)
+      <select id="sort-select" onchange="setSortMode(this.value)">
+        <option value="none">🔀 ソートしない</option>
+        <option value="num_suit" selected>🔢+🎴 数字→形</option>
+        <option value="suit_num">🎴+🔢 形→数字</option>
+        <option value="num">🔢 数字のみ</option>
+        <option value="suit">🎴 形のみ</option>
+      </select>
+    </div>
+    <div id="phand"></div>
+  </div>
+  <div id="acts">
+    <button class="btn btn-play"  id="b-play"  onclick="playSel()">カードを出す</button>
+    <button class="btn btn-interrupt" id="b-interrupt" onclick="playSel()" style="display:none">⚡ 割り込む！</button>
+    <button class="btn btn-draw"  id="b-draw"  onclick="doAction()">山から引く</button>
+    <button class="btn btn-dobon" id="b-dobon" onclick="doDobon()">
+      ドボン！<div class="dtimer" id="dtimer-bar" style="width:0%"></div>
+    </button>
+  </div>
+  <div id="drew-hint" class="">引いたカードを出すか、パスしてください</div>
+  <!-- INTERRUPT BANNER -->
+  <div id="interrupt-banner">
+    <div id="ib-top">
+      <div id="ib-msg">⚡ 割り込みチャンス！</div>
+      <div id="ib-timer-wrap">
+        <div id="ib-secs">4</div>
+        <div id="ib-bar-outer"><div id="ib-bar" style="width:100%"></div></div>
+      </div>
+    </div>
+    <div id="ib-hint">数字が一致するカードを選んで「カードを出す」を押してください</div>
+  </div>
+</div>
+
+<!-- SUIT PICKER -->
+<div id="spick">
+  <!-- 情報パネル（モバイル時に表示） -->
+  <div id="spick-info">
+    <!-- 場のカード＋現在のマーク -->
+    <div id="spick-field-row">
+      <div class="spick-info-col">
+        <div class="spick-info-lbl">場のカード</div>
+        <div id="spick-field-card"></div>
+      </div>
+      <div class="spick-info-col">
+        <div class="spick-info-lbl">現在のマーク</div>
+        <div id="spick-cur-suit"></div>
+      </div>
+    </div>
+    <!-- 相手・自分の手札 -->
+    <div id="spick-hands"></div>
+  </div>
+  <h3>🎴 マークを選んでください</h3>
+  <div id="spick-note"></div>
+  <div class="spick-grid">
+    <div class="scard" style="color:#b91c1c" onclick="pickSuit('hearts')">
+      <div>♥</div><div style="font-size:11px;font-weight:700;color:#b91c1c;margin-top:2px">ハート</div>
+    </div>
+    <div class="scard" style="color:#b91c1c" onclick="pickSuit('diamonds')">
+      <div>♦</div><div style="font-size:11px;font-weight:700;color:#b91c1c;margin-top:2px">ダイヤ</div>
+    </div>
+    <div class="scard" style="color:#0f172a" onclick="pickSuit('spades')">
+      <div>♠</div><div style="font-size:11px;font-weight:700;color:#0f172a;margin-top:2px">スペード</div>
+    </div>
+    <div class="scard" style="color:#0f172a" onclick="pickSuit('clubs')">
+      <div>♣</div><div style="font-size:11px;font-weight:700;color:#0f172a;margin-top:2px">クラブ</div>
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAY -->
+<div id="ov">
+  <div id="ov-scroll">
+    <div id="ov-title"></div>
+    <div id="ov-sub"></div>
+    <!-- ドボンカード＋ポイントカード（横並び） -->
+    <div id="ov-cards-row" style="display:none">
+      <div class="ov-card-col" id="ov-doboncard-wrap">
+        <div class="ov-sec-lbl">🎴 ドボンの場</div>
+        <div id="ov-doboncard"></div>
+      </div>
+      <div class="ov-arrow" id="ov-arrow">→</div>
+      <div class="ov-card-col" id="ov-ptcard-wrap">
+        <div class="ov-sec-lbl">🎯 ポイントカード</div>
+        <div id="ov-ptcard"></div>
+        <div id="ov-pts"></div>
+      </div>
+    </div>
+    <!-- 全員の手札 -->
+    <div id="ov-hands"></div>
+    <button class="ov-btn ov-next" onclick="newRound()">次のラウンド ▶</button>
+    <button class="ov-btn ov-menu" onclick="goMenu()">👥 プレイヤー数を変える</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════
+//  SORT
+// ═══════════════════════════════════
+let sortMode='num_suit';
+
+function setSortMode(mode){
+  sortMode=mode;
+  G.sel=[];
+  applySort();
+  render();
+}
+
+function applySort(){
+  if(sortMode==='none') return;
+  const hand=G.hands[0];
+  const suitOrder={hearts:0,diamonds:1,clubs:2,spades:3,joker:4};
+  hand.sort((a,b)=>{
+    const sa=suitOrder[a.suit]??4, sb=suitOrder[b.suit]??4;
+    const va=a.value===0?14:a.value, vb=b.value===0?14:b.value;
+    if(sortMode==='num_suit') return va!==vb ? va-vb : sa-sb;
+    if(sortMode==='suit_num') return sa!==sb ? sa-sb : va-vb;
+    if(sortMode==='num')      return va-vb;
+    if(sortMode==='suit')     return sa-sb;
+    return 0;
+  });
+}
+
+// ═══════════════════════════════════
+//  CONSTANTS
+// ═══════════════════════════════════
+const SUITS=['hearts','diamonds','spades','clubs'];
+const SYM={hearts:'♥',diamonds:'♦',spades:'♠',clubs:'♣',joker:'🃏'};
+const COL={hearts:'red',diamonds:'red',spades:'black',clubs:'black',joker:'joker'};
+const RD={1:'A',11:'J',12:'Q',13:'K',0:'JKR'};
+const CPU=['CPU-A','CPU-B','CPU-C'];
+// CPU割り込み確率（0〜1）: 数字一致カードを持っていたとき割り込む確率
+const CPU_INTERRUPT_RATE=[0.35, 0.60, 0.85]; // CPU-A, B, C
+// CPU手札戦略: 2枚残しリーチ狙いの傾向（0〜1）
+const CPU_REACH_RATE=[0.30, 0.55, 0.80];
+// Per-player colors: card background class and card-back class
+const PC=['pc0','pc1','pc2','pc3'];
+const PCB=['pc1b','pc2b','pc3b']; // back colors for cpu hands
+const PLAYER_COLORS=['#6b7280','#2563eb','#16a34a','#ca8a04']; // indicator colors
+
+function rd(v){return RD[v]||String(v);}
+function ctext(c){return SYM[c.suit]+rd(c.value);}
+
+function makeDeck(doubled){
+  const d=[];
+  const copies=doubled?2:1;
+  for(let k=0;k<copies;k++){
+    for(const s of SUITS) for(let v=1;v<=13;v++) d.push({suit:s,value:v,id:s[0]+v+'_'+k,nd:false});
+    d.push({suit:'joker',value:0,id:'J1_'+k,nd:false});
+    d.push({suit:'joker',value:0,id:'J2_'+k,nd:false});
+  }
+  return d;
+}
+function shuffle(a){
+  const b=[...a];
+  for(let i=b.length-1;i>0;i--){const j=0|Math.random()*(i+1);[b[i],b[j]]=[b[j],b[i]];}
+  return b;
+}
+
+// ═══════════════════════════════════
+//  SOUND ENGINE  (Web Audio API)
+// ═══════════════════════════════════
+let AC=null;
+function getAC(){
+  if(!AC) AC=new(window.AudioContext||window.webkitAudioContext)();
+  if(AC.state==='suspended') AC.resume();
+  return AC;
+}
+
+function playTone(freq,dur,type='sine',vol=0.18,decay=0.9){
+  try{
+    const ac=getAC();
+    const o=ac.createOscillator();
+    const g=ac.createGain();
+    o.connect(g); g.connect(ac.destination);
+    o.type=type; o.frequency.setValueAtTime(freq,ac.currentTime);
+    g.gain.setValueAtTime(vol,ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+dur*decay);
+    o.start(ac.currentTime); o.stop(ac.currentTime+dur);
+  }catch(e){}
+}
+
+function playNoise(dur=0.06,vol=0.12){
+  try{
+    const ac=getAC();
+    const buf=ac.createBuffer(1,ac.sampleRate*dur,ac.sampleRate);
+    const d=buf.getChannelData(0);
+    for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1);
+    const src=ac.createBufferSource();
+    const g=ac.createGain();
+    const f=ac.createBiquadFilter();
+    src.buffer=buf; f.type='bandpass'; f.frequency.value=400;
+    src.connect(f); f.connect(g); g.connect(ac.destination);
+    g.gain.setValueAtTime(vol,ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+dur);
+    src.start(); src.stop(ac.currentTime+dur);
+  }catch(e){}
+}
+
+const SND={
+  draw:()=>{playNoise(0.08,0.15);setTimeout(()=>playNoise(0.05,0.1),40);},
+  play:()=>{playTone(220,0.12,'triangle',0.2);playNoise(0.04,0.18);},
+  yourTurn:()=>{playTone(523,0.15,'sine',0.15);setTimeout(()=>playTone(659,0.2,'sine',0.15),120);setTimeout(()=>playTone(784,0.3,'sine',0.15),240);},
+  suitChange:()=>{[523,659,784,1047].forEach((f,i)=>setTimeout(()=>playTone(f,0.18,'sine',0.12),i*80));},
+  dobon:()=>{[440,554,659,880].forEach((f,i)=>setTimeout(()=>playTone(f,0.3,'sine',0.2),i*60));},
+  fail:()=>{playTone(220,0.2,'sawtooth',0.15);setTimeout(()=>playTone(196,0.3,'sawtooth',0.15),180);},
+  over:()=>{playTone(300,0.15,'sawtooth',0.2);setTimeout(()=>playTone(240,0.15,'sawtooth',0.2),150);setTimeout(()=>playTone(180,0.4,'sawtooth',0.2),300);},
+};
+
+// ═══════════════════════════════════
+//  STATE
+// ═══════════════════════════════════
+let G={};
+var N=2; // numPlayers
+
+// Dobon 5-second window
+let dobonTimer=null;
+let dobonSecs=0;
+
+function selCnt(n){
+  N=n;
+  document.querySelectorAll('.cnt-btn').forEach((b,i)=>b.classList.toggle('on',i===n-2));
+  document.getElementById('go-btn').disabled=false;
+}
+
+let _doubled=false;
+function startGame(){
+  getAC();
+  _doubled=document.getElementById('double-deck-chk').checked;
+  document.getElementById('setup').style.display='none';
+  document.getElementById('app').style.display='flex';
+  buildUI();
+  initGame();
+}
+
+function goMenu(){
+  document.getElementById('ov').classList.remove('on');
+  document.getElementById('setup').style.display='flex';
+  document.getElementById('app').style.display='none';
+  stopDobonTimer(); stopInterruptWindow();
+}
+
+function buildUI(){
+  const opps=document.getElementById('opps');
+  opps.innerHTML='';
+  for(let i=1;i<N;i++){
+    const r=document.createElement('div');
+    r.className=`orow orow-p${i}`; r.id='or'+i;
+    r.innerHTML=`
+      <div class="olbl" id="ol${i}"><span class="tdot"></span>
+        💻 ${CPU[i-1]} の手札 (<span id="oc${i}">0</span>枚)
+      </div>
+      <div class="ohand" id="oh${i}"></div>`;
+    opps.appendChild(r);
+  }
+  const sb=document.getElementById('scoreboard');
+  sb.innerHTML='';
+  ['あなた',...CPU.slice(0,N-1)].forEach((nm,i)=>{
+    const d=document.createElement('div');
+    d.className='si'; d.id='si'+i;
+    d.innerHTML=`<span class="si-lbl">${nm}</span><span class="si-val" id="sv${i}">0</span>`;
+    sb.appendChild(d);
+  });
+}
+
+function initGame(){
+  stopDobonTimer(); stopInterruptWindow();
+  const prev=G.scores?[...G.scores]:new Array(N).fill(0);
+  const deck=shuffle(makeDeck(_doubled));
+  const hands=[];
+  for(let i=0;i<N;i++) hands.push(deck.splice(0,5));
+  let fi=deck.findIndex(c=>c.value!==0&&c.value!==2&&c.value!==8&&c.value!==9);
+  if(fi<0) fi=0;
+  const fc=deck.splice(fi,1)[0];
+  G={
+    deck,hands,pile:[fc],
+    curSuit:fc.suit,turn:0,
+    drawStack:0,skipNext:0,
+    scores:prev,sel:[],
+    dobonLive:false,lastBy:-1,
+    roundOver:false,
+    revealed:new Array(N).fill(false),
+    drew:false,drewCard:null,
+    interruptActive:false,
+    cpuPaused:false,
+    firstTurn:true,
+  };
+  addLog('新しいラウンド開始！',true);
+  addLog(`最初の場カード: ${ctext(fc)} → 数字が合う人が先出し！`,true);
+  render();
+  startFirstTurn();
+}
+
+function startFirstTurn(){
+  // 誰かが数字一致カードを持つまで場をめくり続ける（ジョーカー・引くなし）
+  flipUntilMatch();
+}
+
+function flipUntilMatch(){
+  if(G.roundOver) return;
+  const tv=topCard().value;
+
+  // 誰が合うか確認（ジョーカーは出せない）
+  const playerMatch=G.hands[0].length>1&&G.hands[0].some(c=>c.value===tv&&c.suit!=='joker');
+  const cpuMatch=[];
+  for(let i=1;i<N;i++){
+    if(G.hands[i].some(c=>c.value===tv&&c.suit!=='joker')) cpuMatch.push(i);
+  }
+
+  if(playerMatch||cpuMatch.length>0){
+    // 誰か合う → 先出しフェーズへ
+    openFirstTurnWindow(playerMatch,cpuMatch);
+    return;
+  }
+
+  // 誰も合わない → 山札から次のカードを場に出す（ジョーカー・特殊はスキップ）
+  let next=null;
+  let tries=0;
+  while(tries<G.deck.length+1){
+    const c=drawOne();
+    if(!c) break;
+    tries++;
+    if(c.suit==='joker'||c.value===2||c.value===8||c.value===9){
+      // スキップして次へ（ジョーカー等はそのまま捨てておく）
+      addLog(`場カード ${ctext(c)} はスキップ（特殊カード）`);
+      G.pile.push(c); G.curSuit=c.suit;
+      render();
+      // 少し間をおいて次をめくる
+      setTimeout(flipUntilMatch,600);
+      return;
+    }
+    next=c;
+    break;
+  }
+
+  if(!next){
+    // 山札が尽きた → プレイヤーからスタート
+    addLog('山札が尽きました → プレイヤーからスタート');
+    G.firstTurn=false;
+    setStatus('あなたのターンです');
+    SND.yourTurn();
+    return;
+  }
+
+  G.pile.push(next); G.curSuit=next.suit;
+  addLog(`場カード変更: ${ctext(next)}`);
+  render();
+  setTimeout(flipUntilMatch,700);
+}
+
+function openFirstTurnWindow(playerMatch,cpuMatch){
+  if(playerMatch){
+    // プレイヤーが合う → 先出しチャンス（割り込みウィンドウ流用）
+    G.firstTurn=true;
+    G.turn=0; G.interruptActive=true;
+    startInterruptWindow();
+    document.getElementById('ib-msg').textContent='🎴 先出しチャンス！数字が合います';
+    document.getElementById('ib-hint').textContent='このカードを選んで「カードを出す」→ あなたから時計回りに順番が決まります';
+    setStatus('🎴 場と数字が合うカードを持っています！先出しで順番を決めよう','ok');
+    SND.yourTurn();
+    setTimeout(()=>{
+      if(!G.interruptActive) return;
+      stopInterruptWindow();
+      if(cpuMatch.length>0) resolveCpuFirstTurn(cpuMatch[0]);
+      else { G.firstTurn=false; G.turn=0; setStatus('あなたのターンです'); SND.yourTurn(); }
+    }, INTERRUPT_SECS*1000+100);
+  } else {
+    // プレイヤーは合わない → CPUが先
+    setTimeout(()=>resolveCpuFirstTurn(cpuMatch[0]),1200);
+  }
+}
+
+function resolveCpuFirstTurn(cpuIdx){
+  G.firstTurn=false;
+  const tv=topCard().value;
+  const hand=G.hands[cpuIdx];
+  const matching=hand.filter(c=>c.value===tv&&c.suit!=='joker');
+  if(!matching.length){ G.turn=0; setStatus('あなたのターンです'); SND.yourTurn(); return; }
+  G.turn=cpuIdx;
+  doPlay(cpuIdx,matching);
+}
+
+function advanceTurnFrom(skip,startFrom){
+  // startFromを起点に時計回りに進める
+  const s=G.skipNext; G.skipNext=0;
+  G.turn=nextIdx(startFrom,s);
+  render();
+  if(G.turn===0){
+    setStatus('あなたのターンです');
+    SND.yourTurn();
+  } else {
+    setStatus(`${CPU[G.turn-1]}が考えています...`);
+    G.cpuPaused=false;
+    startInterruptWindow();
+    setTimeout(()=>{
+      if(G.cpuPaused||G.roundOver||G.turn===0) return;
+      stopInterruptWindow();
+      cpuTurn();
+    }, 4500);
+  }
+}
+
+// ═══════════════════════════════════
+//  CARD LOGIC
+// ═══════════════════════════════════
+function topCard(){return G.pile[G.pile.length-1];}
+
+function cardPlayable(c,handLen){
+  // 手札1枚のときは出せない（山から引くだけ）
+  if(handLen===undefined) handLen=999; // CPU経由などデフォルト
+  if(handLen<=1) return false;
+  if(G.drawStack>0) return c.value===2;
+  if(c.suit==='joker') return true;
+  if(c.value===topCard().value) return true;
+  if(c.suit===G.curSuit) return true;
+  return false;
+}
+
+/*
+  Multi-play rules:
+  - Multiple cards CAN be played if ALL have the same VALUE
+  - That value must equal the top card's value (number match rule)
+    OR it's a response to draw stack (all must be 2s)
+  - Suit-match plays are SINGLE card only (per spec)
+  - Joker is always single play
+*/
+function setPlayable(cards){
+  if(!cards.length) return false;
+
+  // ── 単枚: 通常の出せる判定
+  if(cards.length===1) return cardPlayable(cards[0]);
+
+  // ── 複数枚: 全て同じ数字であること（必須）
+  const v=cards[0].value;
+  if(!cards.every(c=>c.value===v)) return false;
+
+  // ジョーカー複数: 2枚同時出し可
+  if(v===0) return cards.every(c=>c.suit==='joker');
+
+  // drawStack中: 2のみ出せる（複数2枚スタックOK）
+  if(G.drawStack>0) return v===2;
+
+  // 通常: 最初のカードが出せる（数字一致 or スーツ一致）なら
+  // 残りも同じ数字であれば何枚でも追加出しOK
+  // ※handLen制限はtoggleSel/playSel呼び出し元で保証済み
+  return cardPlayable(cards[0], 99);
+}
+
+function checkDobon(hand,target){
+  if(!hand.length) return false;
+  const v=hand.map(c=>c.value);
+  if(v.length===1) return v[0]===target;
+  if(v.length===2){
+    const[a,b]=v;
+    return(a+b===target)||(Math.abs(a-b)===target)||(a*b===target)||
+          (b!==0&&Math.abs(a/b-target)<1e-9)||(a!==0&&Math.abs(b/a-target)<1e-9);
+  }
+  return v.reduce((s,x)=>s+x,0)===target;
+}
+
+function drawOne(){
+  if(!G.deck.length) reshuffle();
+  if(!G.deck.length) return null;
+  const c=G.deck.pop(); c.nd=true; return c;
+}
+
+function reshuffle(){
+  if(G.pile.length<=1) return;
+  const t=G.pile.pop();
+  G.deck=shuffle(G.pile); G.pile=[t];
+  addLog('山札を再シャッフルしました');
+}
+
+function nextIdx(from,skip){
+  let t=(from+1)%N;
+  for(let i=0;i<skip;i++) t=(t+1)%N;
+  return t;
+}
+
+// ═══════════════════════════════════
+//  DOBON TIMER  (5-second window)
+// ═══════════════════════════════════
+function startDobonTimer(){
+  stopDobonTimer();
+  G.dobonLive=true;
+  dobonSecs=10;
+  updateDobonBar();
+  dobonTimer=setInterval(()=>{
+    dobonSecs--;
+    updateDobonBar();
+    if(dobonSecs<=0){
+      stopDobonTimer();
+      G.dobonLive=false;
+      render();
+    }
+  },1000);
+}
+
+function stopDobonTimer(){
+  clearInterval(dobonTimer);
+  dobonTimer=null;
+  dobonSecs=0;
+  updateDobonBar();
+}
+
+// ── INTERRUPT WINDOW ──────────────────────────────
+const INTERRUPT_SECS = 8;  // seconds player has to interrupt
+let intTimer=null;
+let intSecs=0;
+
+function playerHasInterrupt(){
+  if(G.roundOver||G.turn===0) return false;
+  if(G.hands[0].length<=1) return false; // 手札1枚は割り込み不可
+  if(G.drawStack>0) return G.hands[0].some(c=>c.value===2);
+  return G.hands[0].some(c=>c.value===topCard().value);
+}
+
+function startInterruptWindow(){
+  if(!playerHasInterrupt()) return;
+  stopInterruptWindow();
+  intSecs=INTERRUPT_SECS;
+  G.interruptActive=true;
+  render(); // 割り込み可能カードを金色に光らせる
+  updateInterruptUI();
+  document.getElementById('interrupt-banner').classList.add('on');
+  // b-interrupt は非表示（カードを出すボタンで代用）
+  if(G.drawStack>0){
+    document.getElementById('ib-msg').textContent='⚡ 2スタック割り込みチャンス！';
+    document.getElementById('ib-hint').textContent='2のカードを選んで「カードを出す」→ ドロー枚数がさらに増えます';
+    setStatus('⚡ 2を持っている！スタック割り込み可能です','ok');
+  } else {
+    document.getElementById('ib-msg').textContent='⚡ 割り込みチャンス！';
+    document.getElementById('ib-hint').textContent='数字が一致するカードを選んで「カードを出す」を押してください';
+    setStatus('⚡ 割り込みチャンス！数字が合うカードを出せます','ok');
+  }
+  SND.yourTurn();
+  intTimer=setInterval(()=>{
+    intSecs--;
+    updateInterruptUI();
+    if(intSecs<=0) stopInterruptWindow();
+  },1000);
+}
+
+function stopInterruptWindow(){
+  clearInterval(intTimer); intTimer=null;
+  G.interruptActive=false;
+  document.getElementById('interrupt-banner').classList.remove('on');
+  document.getElementById('b-interrupt').style.display='none';
+  updateInterruptUI();
+}
+
+function updateInterruptUI(){
+  const s=document.getElementById('ib-secs');
+  const b=document.getElementById('ib-bar');
+  if(s) s.textContent=Math.max(0,intSecs);
+  if(b) b.style.width=(Math.max(0,intSecs)/INTERRUPT_SECS*100)+'%';
+}
+
+function doInterrupt(){
+  if(!G.interruptActive||G.roundOver) return;
+  const cards=G.sel.map(i=>G.hands[0][i]);
+  if(!cards.length){setStatus('カードを選んでください','warn');return;}
+  // drawStack中の割り込みは2のみ
+  if(G.drawStack>0){
+    if(!cards.every(c=>c.value===2)){
+      setStatus('2スタック割り込みは2のカードのみです','warn'); SND.fail(); return;
+    }
+  } else {
+    // 通常割り込み: topCardと同じ数字
+    const tv=topCard().value;
+    if(!cards.every(c=>c.value===tv)){
+      setStatus('割り込みは数字一致カードのみです','warn'); SND.fail(); return;
+    }
+  }
+  if(!setPlayable(cards)){setStatus('そのカードは出せません','warn');SND.fail();return;}
+  stopInterruptWindow();
+  stopDobonTimer();
+  addLog(`⚡ あなたが割り込んだ！ ${cards.map(ctext).join(' ')}`,true);
+  // Cancel the pending CPU turn
+  G.cpuPaused=true;
+  doPlay(0,cards);
+  // After interrupt, turn becomes player's (already handled by advanceTurn from afterPlay → nextIdx(0))
+}
+
+function updateDobonBar(){
+  const bar=document.getElementById('dtimer-bar');
+  if(bar) bar.style.width=(dobonSecs/10*100)+'%';
+}
+
+// ═══════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════
+function render(){
+  // Discard
+  const dp=document.getElementById('dspile');
+  dp.innerHTML='';
+  if(G.pile.length){
+    const el=mkCard(topCard(),false,false,G.lastBy);
+    el.id='ds-top'; dp.appendChild(el);
+  }
+  // Last-played-by strip
+  const lb=document.getElementById('last-by');
+  if(G.lastBy>=0){
+    const name=G.lastBy===0?'あなた':CPU[G.lastBy-1];
+    lb.textContent=name+' が出した';
+    lb.style.background=PLAYER_COLORS[G.lastBy]+'33';
+    lb.style.color=PLAYER_COLORS[G.lastBy];
+    lb.style.border=`1px solid ${PLAYER_COLORS[G.lastBy]}55`;
+  } else lb.textContent='';
+
+  // Deck
+  document.getElementById('deck-cnt').textContent=G.deck.length;
+  const sb=document.getElementById('stk-badge');
+  if(G.drawStack>0){sb.textContent='+'+G.drawStack*2;sb.classList.add('on');}
+  else sb.classList.remove('on');
+  document.getElementById('deck').className=
+    (G.turn!==0||G.roundOver)?'off':'';
+
+  // Suit
+  const ss=document.getElementById('suit-sym');
+  ss.textContent=SYM[G.curSuit]||'?';
+  ss.style.color=(G.curSuit==='hearts'||G.curSuit==='diamonds')?'#f87171':'#e2e8f0';
+
+  // Turn indicator
+  document.getElementById('turn-ind').textContent=
+    G.turn===0?'あなたのターン':`${CPU[G.turn-1]}のターン`;
+
+  // Opponent hands
+  for(let i=1;i<N;i++){
+    const hand=G.hands[i];
+    const rev=G.revealed[i];
+    const el=document.getElementById('oh'+i);
+    el.innerHTML='';
+    hand.forEach(c=>{
+      if(rev&&!c.nd){
+        // 公開カード: シンプル表示
+        el.appendChild(mkCpuCard(c));
+      } else {
+        // 裏面
+        const bk=document.createElement('div');
+        bk.className=`cback ${PCB[i-1]}`; bk.textContent='🂠';
+        el.appendChild(bk);
+      }
+    });
+    document.getElementById('oc'+i).textContent=hand.length;
+    const lbl=document.getElementById('ol'+i);
+    lbl.classList.toggle('is-turn',G.turn===i);
+  }
+
+  // Player hand
+  // ソートを適用
+  if(G.sel.length===0) applySort();
+  const ph=document.getElementById('phand');
+  ph.innerHTML='';
+  // Compute dobon possibility for player hand right now
+  const dobonPossible=G.dobonLive&&!G.roundOver&&G.lastBy!==0&&checkDobon(G.hands[0],topCard().value);
+  G.hands[0].forEach((c,i)=>{
+    // 割り込み中: drawStack時は2を、通常時はtopCard値一致を光らせる
+    const hl=G.hands[0].length;
+    // firstTurn中は数字一致のみ出せる（スーツ一致は不可）
+    const interruptMatch=G.interruptActive&&hl>1&&(
+      G.drawStack>0 ? c.value===2 : c.value===topCard().value
+    );
+    const normalPlay=G.turn===0&&!G.firstTurn&&cardPlayable(c,hl);
+    const firstTurnPlay=G.turn===0&&G.firstTurn&&hl>1&&c.value===topCard().value;
+    const sel=G.sel.includes(i);
+    const selOrder=G.sel.indexOf(i);
+    // 1枚目が選択済みで同じ数字 → 金色に光る（multi-play候補）
+    const firstSelVal=G.sel.length>0?G.hands[0][G.sel[0]].value:null;
+    const multiCandidate=!sel&&firstSelVal!==null&&c.value===firstSelVal&&hl>1&&
+      (G.drawStack>0?c.value===2:c.value===topCard().value||cardPlayable(G.hands[0][G.sel[0]],hl));
+    const play=normalPlay||firstTurnPlay||interruptMatch||multiCandidate; // 選択順（0始まり、-1なら未選択）
+    const el=mkCard(c,play,sel,0);
+    // 選択順バッジを追加
+    if(sel){
+      const badge=document.createElement('div');
+      badge.className='sel-badge';
+      badge.textContent=selOrder+1;
+      el.appendChild(badge);
+    }
+    // Add dobon-alert class if dobon is possible (red blink)
+    if(dobonPossible) el.classList.add('dobon-alert');
+    el.onclick=()=>toggleSel(i);
+    ph.appendChild(el);
+  });
+  // Apply dobon-field class to discard top card
+  const dsTop=document.getElementById('ds-top');
+  if(dsTop){
+    if(dobonPossible) dsTop.classList.add('dobon-field');
+    else dsTop.classList.remove('dobon-field');
+  }
+  document.getElementById('pcnt').textContent=G.hands[0].length;
+  document.getElementById('plbl').classList.toggle('is-turn',G.turn===0);
+
+  // Scores
+  for(let i=0;i<N;i++){
+    const sv=document.getElementById('sv'+i);
+    if(sv) sv.textContent=G.scores[i];
+    const si=document.getElementById('si'+i);
+    if(si) si.classList.toggle('active',G.turn===i);
+  }
+
+  // Buttons
+  const mine=G.turn===0&&!G.roundOver;
+  const canInterrupt=G.interruptActive&&!G.roundOver;
+  const selCards=G.sel.map(i=>G.hands[0][i]);
+
+  // 「カードを出す」: 自分のターンまたは割り込み中、かつ選択済みカードが出せる場合のみ表示
+  const canPlay=(mine||canInterrupt)&&setPlayable(selCards);
+  const bplay=document.getElementById('b-play');
+  bplay.style.display=canPlay?'':'none';
+  bplay.disabled=false;
+
+  // 割り込みボタンは常に非表示（「カードを出す」に統合）
+  document.getElementById('b-interrupt').style.display='none';
+
+  // 「ドボン！」: ドボン可能（自分のカード以外・手札が合う）場合のみ表示
+  const dobonActive=G.dobonLive&&!G.roundOver&&G.lastBy!==0&&checkDobon(G.hands[0],topCard().value);
+  const bd=document.getElementById('b-dobon');
+  bd.style.display=dobonActive?'':'none';
+  bd.classList.toggle('live',dobonActive);
+
+  // 「山から引く / パス」: 自分のターン中のみ表示
+  const bdraw=document.getElementById('b-draw');
+  bdraw.style.display=mine?'':'none';
+  bdraw.disabled=false;
+  if(G.drew){
+    bdraw.textContent='パス（ターン終了）';
+    bdraw.className='btn btn-pass';
+  } else {
+    bdraw.textContent='山から引く / パス';
+    bdraw.className='btn btn-draw';
+  }
+
+  document.getElementById('drew-hint').classList.toggle('on',G.drew&&G.turn===0);
+}
+
+function mkCpuCard(card){
+  const div=document.createElement('div');
+  const isJoker=card.suit==='joker';
+  const isRed=card.suit==='hearts'||card.suit==='diamonds';
+  div.className='ccard '+(isJoker?'cc-joker':isRed?'cc-red':'cc-black');
+  if(isJoker){
+    div.innerHTML='<div class="ccard-sym" style="font-size:22px">🃏</div><div class="ccard-rank" style="font-size:11px">JKR</div>';
+  } else {
+    const sym=SYM[card.suit];
+    const r=rd(card.value);
+    div.innerHTML=`<div class="ccard-sym">${sym}</div><div class="ccard-rank">${r}</div>`;
+  }
+  return div;
+}
+
+function mkCard(card,playable,sel,owner){
+  const div=document.createElement('div');
+  const pc=PC[owner>=0?owner:0];
+  div.className=`card ${pc} ${COL[card.suit]}`;
+  if(playable) div.classList.add('playable');
+  if(sel) div.classList.add('sel');
+  const sym=SYM[card.suit],r=rd(card.value);
+
+  // モバイル: シンプル表示（スーツ記号＋数字だけ、CCPUカードと同じ構造）
+  if(document.documentElement.classList.contains('mobile')){
+    // カードの上下いっぱいにスーツ・数字を表示
+    div.style.cssText+='padding:0;overflow:hidden;';
+    if(card.suit==='joker'){
+      div.innerHTML=`
+        <div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:36px;line-height:1">🃏</div>
+        <div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:#7c2d12;line-height:1">JKR</div>`;
+    } else {
+      div.innerHTML=`
+        <div class="cs" style="flex:1;display:flex;align-items:center;justify-content:center;font-size:38px;line-height:1">${sym}</div>
+        <div class="cr" style="flex:1;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;line-height:1">${r}</div>`;
+    }
+    return div;
+  }
+
+  // PC: フル表示
+  if(card.suit==='joker'){
+    div.innerHTML=`<div class="cs" style="font-size:26px">🃏</div><div style="font-size:9px;font-weight:900;color:#7c2d12">JOKER</div>`;
+  } else {
+    div.innerHTML=`
+      <div class="cc tl"><span class="cr">${r}</span><span style="font-size:10px">${sym}</span></div>
+      <div class="cs">${sym}</div>
+      <div class="cr">${r}</div>
+      <div class="cc br"><span class="cr">${r}</span><span style="font-size:10px">${sym}</span></div>`;
+  }
+  return div;
+}
+
+// ═══════════════════════════════════
+//  PLAYER ACTIONS
+// ═══════════════════════════════════
+function toggleSel(i){
+  if((G.turn!==0&&!G.interruptActive)||G.roundOver) return;
+  const card=G.hands[0][i];
+
+  // デセレクト
+  const idx=G.sel.indexOf(i);
+  if(idx>=0){ G.sel.splice(idx,1); render(); return; }
+
+  // 初回選択: firstTurn中は数字一致のみ、通常は cardPlayable
+  if(G.sel.length===0){
+    const hl=G.hands[0].length;
+    const canSelect=G.firstTurn
+      ? (hl>1&&card.value===topCard().value)
+      : cardPlayable(card,hl);
+    if(canSelect){ G.sel=[i]; render(); }
+    return;
+  }
+
+  // 2枚目以降: 同じ数字なら追加、違う数字なら切り替え
+  const firstVal = G.hands[0][G.sel[0]].value;
+  if(card.value === firstVal){
+    // 同じ数字 → 追加（setPlayableで出せるか判断するのでここでは弾かない）
+    G.sel.push(i);
+  } else {
+    // 違う数字 → 選択を切り替え
+    if(cardPlayable(card)) G.sel=[i];
+  }
+  render();
+}
+function playSel(){
+  if(!G.sel.length) return;
+  // 通常ターン or 割り込みウィンドウ中なら実行可
+  if(G.turn!==0 && !G.interruptActive) return;
+  const cards=G.sel.map(i=>G.hands[0][i]);
+  // firstTurn中は数字一致のみ出せる
+  if(G.firstTurn){
+    if(!cards.every(c=>c.value===topCard().value)){
+      setStatus('順番決めは数字が合うカードのみです','warn');
+      SND.fail(); return;
+    }
+  } else if(!setPlayable(cards)){
+    setStatus('そのカードは出せません！','warn');
+    SND.fail();
+    return;
+  }
+  if(G.interruptActive){
+    stopInterruptWindow();
+    stopDobonTimer();
+    G.cpuPaused=true;
+    if(G.firstTurn){
+      G.firstTurn=false;
+      G.turn=0;
+      addLog(`🎴 あなたが先出し！ ${cards.map(ctext).join(' ')} → あなたから時計回りに開始`,true);
+    } else {
+      addLog(`⚡ あなたが割り込んだ！ ${cards.map(ctext).join(' ')}`,true);
+    }
+  }
+  doPlay(0,cards);
+}
+
+// Draw / Pass unified
+function doAction(){
+  if(G.turn!==0||G.roundOver) return;
+  getAC(); // keep audio unlocked
+
+  // Pass after having drawn
+  if(G.drew){
+    if(G.hands[0].length>=11&&G.hands[0].some(c=>cardPlayable(c,G.hands[0].length))){
+      setStatus('⚠️ 11枚以上！カードを出してからパスできます','warn');
+      SND.fail(); return;
+    }
+    addLog('パス（ターン終了）');
+    G.drew=false; G.drewCard=null; G.sel=[];
+    advanceTurn(0);
+    return;
+  }
+
+  // Draw penalty cards (card 2 stack) — turn continues
+  if(G.drawStack>0){
+    const num=G.drawStack*2; G.drawStack=0;
+    for(let i=0;i<num;i++){const c=drawOne();if(c)G.hands[0].push(c);}
+    SND.draw();
+    stopDobonTimer(); G.dobonLive=false; // 引いた時点でドボン権消滅
+    addLog(`🔢 ${num}枚引いた → ターン継続！`,true);
+    // 11枚以上でも出せるカードがあればオーバーにならない
+    if(G.hands[0].length>=11){
+      const canPlay=G.hands[0].some(c=>cardPlayable(c,G.hands[0].length));
+      if(!canPlay){endRound(null,'over',0);return;}
+      addLog('⚠️ 11枚以上！カードを出してください',true);
+    }
+    G.drew=true;
+    render();
+    setStatus(`${num}枚引いた → カードを出すか、パスしてください`,'ok');
+    return;
+  }
+
+  // Normal draw (= pass choice)
+  const c=drawOne();
+  if(!c){setStatus('山札がありません','warn');return;}
+  G.hands[0].push(c);
+  SND.draw();
+  stopDobonTimer(); G.dobonLive=false; // 引いた時点でドボン権消滅
+  addLog(`山から ${ctext(c)} を引いた`);
+  // 11枚以上でも出せるカードがあればオーバーにならない
+  if(G.hands[0].length>=11){
+    const canPlay=G.hands[0].some(c=>cardPlayable(c,G.hands[0].length));
+    if(!canPlay){endRound(null,'over',0);return;}
+    addLog('⚠️ 11枚以上！カードを出してください',true);
+  }
+  G.drew=true; G.drewCard=c;
+  setStatus(cardPlayable(c,G.hands[0].length)?`${ctext(c)} を引いた → 出せます！`:`${ctext(c)} を引いた → パスしてください`);
+  render();
+}
+
+// ═══════════════════════════════════
+//  PLAY CARDS (shared)
+// ═══════════════════════════════════
+function doPlay(pi,cards){
+  const hand=G.hands[pi];
+  cards.forEach(c=>{const i=hand.indexOf(c);if(i>=0)hand.splice(i,1);});
+  if(pi===0){G.sel=[];G.drew=false;G.drewCard=null;}
+  cards.forEach(c=>G.pile.push(c));
+  const last=cards[cards.length-1];
+  G.lastBy=pi;
+  SND.play();
+  // Start 5-second dobon window for ALL players
+  startDobonTimer();
+  const name=pi===0?'あなた':CPU[pi-1];
+  addLog(`${name} が ${cards.map(ctext).join(' ')} を出した`,true);
+  handleSp(last,pi,cards);
+}
+
+function handleSp(card,who,all){
+  if(card.suit==='joker'){
+    G.drawStack=0;
+    const ni=(who+1)%N;
+    G.revealed[ni]=true;
+    // 公開した瞬間の手札は全部見える（以降引くカードだけnd:trueで非公開）
+    G.hands[ni].forEach(c=>{ c.nd=false; });
+    const tn=ni===0?'あなた':CPU[ni-1];
+    addLog(`🃏 ジョーカー！${tn}の手札公開（今後引くカードは非公開）`,true);
+    render(); // show revealed hand FIRST
+    if(who===0){
+      setStatus(`${tn}の手札を見てからマークを選んでください 👀`,'ok');
+      const note=document.getElementById('spick-note');
+      note.textContent=`${tn}の手札を確認してマークを選んでください`;
+      setTimeout(()=>{document.getElementById('spick').classList.add('on');if(!document.documentElement.classList.contains('mobile')) document.getElementById('app').style.paddingBottom='200px';renderSpickHands();},700);
+      return;
+    } else {
+      G.curSuit=cpuPickJoker(who,ni);
+      addLog(`${CPU[who-1]}がマークを ${SYM[G.curSuit]} に変更（公開手札を分析）`);
+      SND.suitChange();
+    }
+    afterPlay(who); return;
+  }
+
+  G.curSuit=card.suit;
+  if(card.value===2){
+    G.drawStack+=all.filter(c=>c.value===2).length;
+    addLog(`🔢 2のカード！次のプレイヤーは${G.drawStack*2}枚引く必要があります`);
+  }
+  if(card.value===8){
+    addLog('8のカード！マークを変更できます');
+    if(who===0){
+      document.getElementById('spick-note').textContent='好きなマークを選んでください';
+      document.getElementById('spick').classList.add('on');
+      if(!document.documentElement.classList.contains('mobile')) document.getElementById('app').style.paddingBottom='200px';
+      renderSpickHands();
+      return;
+    } else {
+      G.curSuit=cpuBestSuit(who);
+      addLog(`${CPU[who-1]}がマークを ${SYM[G.curSuit]} に変更`);
+      SND.suitChange();
+    }
+  }
+  if(card.value===9){
+    G.skipNext=1;
+    const si=(who+1)%N;
+    addLog(`⏭️ 9のカード！${si===0?'あなた':CPU[si-1]}のターンをスキップ`);
+  }
+  afterPlay(who);
+}
+
+function afterPlay(who){
+  if(!G.hands[who].length){endRound(null,'over',who);return;}
+  render();
+  // CPU割り込みチェック（出したプレイヤー以外のCPUが数字一致カードを持っていたら割り込む可能性）
+  if(!G.roundOver && checkCpuInterrupt(who)){
+    return; // 割り込み処理が引き継ぐ
+  }
+  advanceTurn(who);
+}
+
+function checkCpuInterrupt(lastPlayed){
+  const tv=topCard().value;
+  // ドボン窓中（ドボン権がある間）はCPU割り込みより先にドボンチェック
+  // → cpuTurn冒頭でドボンチェックするので割り込み後でもOK
+
+  // 出した人の次のCPUから順に割り込み候補を探す
+  // （本来は早い者勝ちだが、CPUは順番に即決する）
+  for(let offset=1;offset<N;offset++){
+    const ci=(lastPlayed+offset)%N;
+    if(ci===0) continue; // プレイヤーは割り込みウィンドウで別処理
+    if(ci===lastPlayed) continue;
+    const hand=G.hands[ci];
+    if(hand.length<=1) continue; // 手札1枚は割り込み不可
+    const hasMatch=hand.some(c=>c.value===tv && c.suit!=='joker');
+    if(!hasMatch) continue;
+    const skillIdx=ci-1; // CPU-A=0, B=1, C=2
+    const rate=CPU_INTERRUPT_RATE[skillIdx]??0.35;
+    if(Math.random()<rate){
+      // 割り込み決定
+      const delay=600+Math.random()*800;
+      setTimeout(()=>doCpuInterrupt(ci,lastPlayed), delay);
+      return true;
+    }
+  }
+  return false;
+}
+
+function doCpuInterrupt(ci, lastPlayed){
+  if(G.roundOver) return;
+  const hand=G.hands[ci];
+  const tv=topCard().value;
+  const name=CPU[ci-1];
+
+  // ドボンチェック（割り込み前にドボンできるか）
+  if(G.dobonLive && G.lastBy!==ci && checkDobon(hand,tv)){
+    const dobonner=G.lastBy;
+    const canReturn=checkDobon(G.hands[dobonner],tv);
+    const riskThreshold=hand.length<=2?0.9:hand.length<=3?0.5:0.15;
+    if(!canReturn || Math.random()<riskThreshold){
+      stopDobonTimer();
+      if(canReturn){
+        addLog(`💻 ${name}: ドボン返し！🔥`,true); SND.dobon();
+        endRound(dobonner,'dobon_return',ci); return;
+      }
+      addLog(`💻 ${name}: ドボン！${name}の勝ち！`,true); SND.dobon();
+      endRound(ci,'dobon',G.lastBy); return;
+    } else {
+      addLog(`🤔 ${name}：…（ドボン返しを警戒して見送った）`);
+    }
+  }
+
+  // 割り込みカード選択（数字一致カード、複数あれば全部出す）
+  const matching=hand.filter(c=>c.value===tv && c.suit!=='joker');
+  if(!matching.length){ advanceTurn(lastPlayed); return; }
+
+  // 本当に出すか（ドボンされるリスク確認）
+  const danger=isDangerous(matching[0],ci);
+  const skillIdx=ci-1;
+  const reachRate=CPU_REACH_RATE[skillIdx]??0.3;
+
+  // 2枚残しリーチ狙い: 出した後2枚になるなら積極的に
+  const afterCount=hand.length-matching.length;
+  const willReach=afterCount===2;
+  const willOne=afterCount===1; // 1枚は出せないのでNG
+
+  if(willOne){
+    // 1枚になってしまう → 見送り（出せなくなるので）
+    addLog(`💭 ${name}：割り込めるが1枚になるので見送り`);
+    advanceTurn(lastPlayed); return;
+  }
+
+  // 危険でもリーチ狙いなら積極的に
+  const goForIt = willReach
+    ? Math.random()<(reachRate+0.2)
+    : !danger || Math.random()<0.3;
+
+  if(!goForIt){
+    addLog(`💭 ${name}：割り込みを見送った`);
+    advanceTurn(lastPlayed); return;
+  }
+
+  // 割り込み実行
+  addLog(`⚡ ${name}が割り込んだ！ ${matching.map(ctext).join(' ')}`,true);
+  stopInterruptWindow(); // プレイヤーの割り込み窓も閉じる
+  G.cpuPaused=true;
+  G.turn=ci;
+  doPlay(ci,matching);
+}
+
+function advanceTurn(from){
+  const skip=G.skipNext; G.skipNext=0;
+  G.turn=nextIdx(from,skip);
+  render();
+  if(G.turn===0){
+    setStatus('あなたのターンです');
+    SND.yourTurn();
+  } else {
+    setStatus(`${CPU[G.turn-1]}が考えています...`);
+    G.cpuPaused=false;
+    // Start interrupt window so player can jump in
+    startInterruptWindow();
+    // CPU waits 2.4s (interrupt window = 4s, but CPU acts at 2.4s if no interrupt)
+    setTimeout(()=>{
+      if(G.cpuPaused||G.roundOver||G.turn===0) return;
+      stopInterruptWindow();
+      cpuTurn();
+    }, 4500);
+  }
+}
+
+// ═══════════════════════════════════
+//  DOBON
+// ═══════════════════════════════════
+function doDobon(){
+  if(!G.dobonLive||G.roundOver) return;
+  if(G.lastBy===0){
+    setStatus('自分が出したカードにはドボンできません','warn');
+    SND.fail(); return;
+  }
+  stopDobonTimer();
+  const target=topCard().value;
+  if(checkDobon(G.hands[0],target)){
+    addLog('🎉 ドボン！あなたの勝ち！',true);
+    SND.dobon();
+    endRound(0,'dobon',G.lastBy);
+  } else {
+    addLog('❌ 誤ドボン！あなたの負け！',true);
+    SND.fail();
+    endRound(null,'miss_dobon',0);
+  }
+}
+
+// ═══════════════════════════════════
+//  CPU AI
+// ═══════════════════════════════════
+
+function cpuHandValue(hand){ return hand.reduce((s,c)=>s+(c.value===0?20:c.value),0); }
+function nextIdx_(from){ return (from+1)%N; }
+
+// あるカードを出したとき相手にドボンされる危険があるか
+function isDangerous(card, excludeIdx){
+  const val=card.value;
+  for(let pi=0;pi<N;pi++){
+    if(pi===excludeIdx) continue;
+    if(pi===0&&checkDobon(G.hands[0],val)) return true;
+    if(pi!==0&&G.revealed[pi]&&checkDobon(G.hands[pi],val)) return true;
+  }
+  return false;
+}
+
+// マルチ出し候補
+function buildMulti(idx,chosen){
+  const hand=G.hands[idx];
+  if(chosen.suit==='joker') return hand.filter(c=>c.suit==='joker');
+  if(chosen.value===topCard().value)
+    return hand.filter(c=>c.value===chosen.value&&cardPlayable(c,hand.length));
+  return [chosen];
+}
+
+// 釣り餌判定：candidateを出した後の残り手札でドボン返しを狙える、かつ相手がドボンできる
+function isBait(idx, candidate){
+  const hand=G.hands[idx];
+  const remaining=hand.filter(c=>c!==candidate);
+  if(remaining.length<2||remaining.length>4) return false;
+  // 残り手札でドボン返しできるか
+  if(!checkDobon(remaining, candidate.value)) return false;
+  // プレイヤーがcandidateの数値でドボンできるか（釣り対象）
+  if(!checkDobon(G.hands[0], candidate.value)) return false;
+  return true;
+}
+
+function cpuTurn(){
+  if(G.roundOver||G.turn===0) return;
+  const idx=G.turn;
+  const hand=G.hands[idx];
+  const name=CPU[idx-1];
+
+  // ドボンチェック（自分以外が出したカードに対して）
+  if(G.dobonLive&&G.lastBy!==idx&&checkDobon(hand,topCard().value)){
+    const dobonner=G.lastBy;
+    const target=topCard().value;
+
+    // ── ドボン返しチェック（CPUがドボンされる側の場合）──
+    // ドボンしようとしている相手（dobonner）が返せるか？
+    const returnersHand=G.hands[dobonner];
+    const canReturn=checkDobon(returnersHand,target);
+
+    if(canReturn){
+      // ドボン返しされる危険がある → 慎重判断
+      // 自分の手札の枚数が少ないほどリスクを取る（負け筋が減るため）
+      // 逆に手札が多い（余裕がある）なら見送る
+      const riskThreshold=hand.length<=2?0.9:hand.length<=3?0.5:0.15;
+      const roll=Math.random();
+
+      if(roll>riskThreshold){
+        // 見送り → ログで匂わせる
+        addLog(`🤔 ${name}：…（ドボン返しを警戒して見送った）`,false);
+        // タイマーをそのまま継続（他のプレイヤーが宣言できる）
+        // cpuTurnはここで終わり。ターンは advanceTurn で続く
+        setTimeout(()=>{
+          if(!G.roundOver&&G.turn===idx){
+            cpuPlay(idx); // 自分のターンを続ける
+          }
+        },300);
+        return;
+      }
+    }
+
+    stopDobonTimer();
+
+    // ドボン返しチェック（するとわかった上でドボン宣言 → 返されたら仕方なし）
+    if(canReturn){
+      addLog(`💻 ${name}: ドボン！（リスク覚悟）`,true);
+      SND.dobon();
+      // 返されるのでdobon_return
+      addLog(`💻 ${CPU[dobonner-1]??'あなた'}: ドボン返し！🔥`,true);
+      endRound(dobonner,'dobon_return',idx);
+      return;
+    }
+
+    addLog(`💻 ${name}: ドボン！${name}の勝ち！`,true);
+    SND.dobon();
+    endRound(idx,'dobon',G.lastBy);
+    return;
+  }
+
+  // 2スタック処理
+  if(G.drawStack>0){
+    const twos=hand.filter(c=>c.value===2&&cardPlayable(c,hand.length));
+    if(twos.length){doPlay(idx,twos);return;}
+    const num=G.drawStack*2; G.drawStack=0;
+    for(let i=0;i<num;i++){const c=drawOne();if(c)hand.push(c);}
+    SND.draw(); stopDobonTimer(); G.dobonLive=false;
+    addLog(`${name} ${num}枚引いた → ターン継続`);
+    if(hand.length>=11&&!hand.some(c2=>cardPlayable(c2,hand.length))){endRound(null,'over',idx);return;}
+    render();
+    setTimeout(()=>cpuPlay(idx),2200);
+    return;
+  }
+
+  setTimeout(()=>cpuPlay(idx),100);
+}
+
+function cpuPlay(idx){
+  if(G.roundOver) return;
+  const hand=G.hands[idx];
+  const name=CPU[idx-1];
+
+  // 手札1枚 → 強制ドロー
+  if(hand.length<=1){
+    const c=drawOne();
+    if(!c){advanceTurn(idx);return;}
+    hand.push(c); SND.draw(); stopDobonTimer(); G.dobonLive=false;
+    addLog(`${name} 手札1枚のため山から1枚引いた`);
+    if(hand.length>=11&&!hand.some(c2=>cardPlayable(c2,hand.length))){endRound(null,'over',idx);return;}
+    if(cardPlayable(c,hand.length)) setTimeout(()=>doPlay(idx,[c]),1800);
+    else advanceTurn(idx);
+    return;
+  }
+
+  const play=hand.filter(c=>cardPlayable(c,hand.length));
+
+  if(!play.length){
+    const c=drawOne();
+    if(!c){advanceTurn(idx);return;}
+    hand.push(c); SND.draw(); stopDobonTimer(); G.dobonLive=false;
+    addLog(`${name} 山から1枚引いた（パス）`);
+    if(hand.length>=11&&!hand.some(c2=>cardPlayable(c2,hand.length))){endRound(null,'over',idx);return;}
+    if(cardPlayable(c,hand.length)) setTimeout(()=>doPlay(idx,[c]),1800);
+    else advanceTurn(idx);
+    return;
+  }
+
+  const pSize=G.hands[0].length;
+  let chosen=null;
+
+  // ① 釣り餌戦略（手札3枚以上、プレイヤーの手札が2〜4枚の時に仕掛ける）
+  if(!chosen && hand.length>=3 && pSize>=2 && pSize<=4){
+    const bait=play.find(c=>isBait(idx,c));
+    if(bait){
+      addLog(`😈 ${name}が罠を仕掛けた…`);
+      chosen=bait;
+    }
+  }
+
+  // ② プレイヤーの手札が少ない → 妨害優先（2スタック・9スキップ）
+  if(!chosen && pSize<=3){
+    const two=play.find(c=>c.value===2);
+    const nine=play.find(c=>c.value===9&&nextIdx_(idx)===0);
+    if(nine) chosen=nine;
+    else if(two) chosen=two;
+  }
+
+  // ③ ジョーカー（手札4枚以上で使う、情報収集価値が高い）
+  if(!chosen && hand.length>=4){
+    const joker=play.find(c=>c.suit==='joker');
+    if(joker) chosen=joker;
+  }
+
+  // ④ 危険回避 → 安全なカードを優先
+  if(!chosen){
+    const safe=play.filter(c=>!isDangerous(c,idx));
+    const pool=safe.length?safe:play;
+
+    // 安全な中で優先度
+    const skillIdx_=idx-1;
+    const reachRate_=CPU_REACH_RATE[skillIdx_]??0.3;
+    const handAfter=(c)=>hand.length - buildMulti(idx,c).length;
+
+    // 2枚残しリーチ狙い: 出した後2枚になるカードを優先（強さに応じて）
+    const reachCand=pool.filter(c=>handAfter(c)===2 && !isDangerous(c,idx));
+    if(reachCand.length && Math.random()<reachRate_){
+      chosen=reachCand[0];
+    }
+
+    if(!chosen){
+      chosen=
+        pool.find(c=>c.value===2)||
+        pool.find(c=>c.value===8)||
+        pool.reduce((best,c)=>{
+          // 2枚残しになるカードを優先、次に高数値
+          const bAfter=handAfter(best), cAfter=handAfter(c);
+          if(cAfter===2&&bAfter!==2) return c;
+          if(bAfter===2&&cAfter!==2) return best;
+          const bv=best.value===0?20:best.value;
+          const cv=c.value===0?20:c.value;
+          return cv>bv?c:best;
+        });
+    }
+  }
+
+  if(!chosen) chosen=play[0];
+
+  // マルチ出し（同じ数字を全部出す）
+  doPlay(idx, buildMulti(idx,chosen));
+}
+
+// ═══════════════════════════════════
+//  SUIT PICKER// ═══════════════════════════════════
+//  SUIT PICKER
+// ═══════════════════════════════════
+function renderSpickHands(){
+  // 常に実行（PC: spick-info は display:none のままなので見えないが無害）
+  // 場のカード
+  const fieldEl=document.getElementById('spick-field-card');
+  if(!fieldEl) return;
+  fieldEl.innerHTML='';
+  if(G&&G.pile&&G.pile.length){
+    fieldEl.appendChild(mkCard(topCard(),false,false,G.lastBy>=0?G.lastBy:0));
+  }
+  // 現在のマーク
+  const suitEl=document.getElementById('spick-cur-suit');
+  if(suitEl) suitEl.textContent=(G&&SYM[G.curSuit])||'?';
+
+  // 手札
+  const wrap=document.getElementById('spick-hands');
+  if(!wrap||!G) return;
+  wrap.innerHTML='';
+  const names=['あなた',...CPU.slice(0,N-1)];
+  // 相手の手札（公開中は表、非公開は裏返し）
+  for(let pi=1;pi<N;pi++){
+    const hand=G.hands[pi];
+    if(!hand||!hand.length) continue;
+    const row=document.createElement('div');
+    row.className='spick-hand-row';
+    const lbl=document.createElement('div');
+    lbl.className='spick-hand-lbl';
+    const isRevealed=G.revealed&&G.revealed[pi];
+    lbl.textContent=names[pi]+'の手札'+(isRevealed?'（公開中）':'');
+    row.appendChild(lbl);
+    const cardsDiv=document.createElement('div');
+    cardsDiv.className='spick-hand-cards';
+    hand.forEach(c=>{
+      if(isRevealed&&!c.nd){
+        cardsDiv.appendChild(mkCard(c,false,false,pi));
+      } else {
+        const bk=document.createElement('div');
+        bk.className='cback '+(PCB[pi-1]||'');
+        bk.textContent='🂠';
+        cardsDiv.appendChild(bk);
+      }
+    });
+    row.appendChild(cardsDiv);
+    wrap.appendChild(row);
+  }
+  // 自分の手札
+  const myRow=document.createElement('div');
+  myRow.className='spick-hand-row';
+  const myLbl=document.createElement('div');
+  myLbl.className='spick-hand-lbl';
+  myLbl.textContent='あなたの手札';
+  myRow.appendChild(myLbl);
+  const myCards=document.createElement('div');
+  myCards.className='spick-hand-cards';
+  (G.hands[0]||[]).forEach(c=>myCards.appendChild(mkCard(c,false,false,0)));
+  myRow.appendChild(myCards);
+  wrap.appendChild(myRow);
+}
+
+function pickSuit(suit){
+  document.getElementById('spick').classList.remove('on');
+  document.getElementById('app').style.paddingBottom='';
+  G.curSuit=suit;
+  addLog(`マークを ${SYM[suit]} に変更`);
+  SND.suitChange();
+  afterPlay(0);
+}
+
+function cpuBestSuit(idx){
+  const cnt={};SUITS.forEach(s=>cnt[s]=0);
+  G.hands[idx].forEach(c=>{if(c.suit!=='joker')cnt[c.suit]++;});
+  return SUITS.sort((a,b)=>cnt[b]-cnt[a])[0];
+}
+
+function cpuPickJoker(cpuIdx,revIdx){
+  const own={};SUITS.forEach(s=>own[s]=0);
+  G.hands[cpuIdx].forEach(c=>{if(c.suit!=='joker')own[c.suit]++;});
+  const opp={};SUITS.forEach(s=>opp[s]=0);
+  G.hands[revIdx].filter(c=>!c.nd).forEach(c=>{if(c.suit!=='joker')opp[c.suit]++;});
+  return SUITS.sort((a,b)=>(own[b]-opp[b])-(own[a]-opp[a]))[0];
+}
+
+// ═══════════════════════════════════
+//  ROUND END
+// ═══════════════════════════════════
+function endRound(winner,reason,loser){
+  G.roundOver=true; G.dobonLive=false;
+  stopDobonTimer(); stopInterruptWindow(); G.sel=[];
+
+  if(!G.deck.length) reshuffle();
+  let pts=0, pc=null;
+  if(G.deck.length){
+    pc=drawOne();
+    pts=pc.value===0?20:pc.value;
+    addLog(`ポイントカード: ${ctext(pc)} → ${pts}点`);
+  }
+  const total=pts*(reason==='dobon_return'?2:1);
+  let title='',sub='',ptd='';
+
+  if(reason==='dobon'||reason==='dobon_return'){
+    G.scores[loser]-=total;
+    G.scores[winner]+=total;
+    const wn=winner===0?'あなた':CPU[winner-1];
+    const ln=loser===0?'あなた':CPU[loser-1];
+    if(reason==='dobon_return'){
+      title=winner===0?'ドボン返し！🔥🎉':'ドボン返しされた！😱';
+      sub=`${wn} がドボン返し！${ln}から ${total}pt（2倍）を奪った`;
+      ptd=(winner===0?'+':'-')+total+' pts (×2)';
+    } else {
+      title=winner===0?'ドボン！🎉':'ドボンされた！😱';
+      sub=`${wn} が ${ln} から ${total}pt を奪った`;
+      ptd=(winner===0?'+':'-')+total+' pts';
+    }
+  } else {
+    const each=total;
+    for(let i=0;i<N;i++){
+      if(i===loser) G.scores[i]-=each*(N-1);
+      else G.scores[i]+=each;
+    }
+    const ln=loser===0?'あなた':CPU[loser-1];
+    title=reason==='over'?'オーバー！💥':'誤ドボン！❌';
+    sub=`${ln}が負け → 他の${N-1}人がそれぞれ ${each}pt 獲得`;
+    ptd=loser===0?`-${each*(N-1)} pts`:`+${each} pts`;
+    SND.over();
+  }
+
+  render();
+  document.getElementById('ov-title').textContent=title;
+  document.getElementById('ov-sub').textContent=sub;
+
+  // ── ドボンカード＋ポイントカード 横並び表示 ──
+  const cardsRow=document.getElementById('ov-cards-row');
+  const dobonCardEl=document.getElementById('ov-doboncard');
+  const ptCardEl=document.getElementById('ov-ptcard');
+  const ptsPtsEl=document.getElementById('ov-pts');
+  const arrowEl=document.getElementById('ov-arrow');
+  dobonCardEl.innerHTML=''; ptCardEl.innerHTML='';
+
+  const isDobon=reason==='dobon'||reason==='dobon_return';
+  if(isDobon||pc){
+    cardsRow.style.display='flex';
+    // ドボンカード
+    document.getElementById('ov-doboncard-wrap').style.display=isDobon?'':'none';
+    if(isDobon){
+      dobonCardEl.appendChild(mkCard(topCard(),false,false,loser>=0?loser:0));
+    }
+    // 矢印（両方あるとき）
+    arrowEl.style.display=(isDobon&&pc)?'':'none';
+    // ポイントカード
+    document.getElementById('ov-ptcard-wrap').style.display=pc?'':'none';
+    if(pc){
+      ptCardEl.appendChild(mkCard(pc,false,false,winner>=0?winner:0));
+      ptsPtsEl.textContent=ptd;
+    }
+  } else {
+    cardsRow.style.display='none';
+  }
+
+  // ── 全員の手札を表示 ──
+  const ovHands=document.getElementById('ov-hands');
+  ovHands.innerHTML='';
+  const topVal=topCard().value;
+  const names=['あなた',...CPU.slice(0,N-1)];
+  const PCOLORS=['#e2c97e','#93c5fd','#86efac','#fde68a'];
+
+  for(let pi=0;pi<N;pi++){
+    const hand=G.hands[pi];
+    const nm=names[pi];
+    const isWinner=(winner>=0&&pi===winner);
+    const isLoser=(loser>=0&&pi===loser);
+
+    const block=document.createElement('div');
+    block.className='ov-player-block'+(isWinner?' ov-winner':isLoser?' ov-loser':'');
+
+    // 名前行
+    const nameRow=document.createElement('div');
+    nameRow.className='ov-player-name';
+    nameRow.style.color=PCOLORS[pi];
+    nameRow.textContent=nm;
+    if(isWinner){const b=document.createElement('span');b.className='ov-badge win';b.textContent='勝';nameRow.appendChild(b);}
+    if(isLoser){const b=document.createElement('span');b.className='ov-badge lose';b.textContent='負';nameRow.appendChild(b);}
+    block.appendChild(nameRow);
+
+    // カード列
+    const cardsRow=document.createElement('div');
+    cardsRow.className='ov-player-cards';
+    hand.forEach(c=>{
+      const cel=mkCard(c,false,false,pi);
+      cardsRow.appendChild(cel);
+    });
+    block.appendChild(cardsRow);
+
+    // ドボン計算式（勝者のみ）
+    if((reason==='dobon'||reason==='dobon_return')&&isWinner&&hand.length>=1){
+      const eq=document.createElement('div');
+      eq.className='ov-dobon-eq';
+      const vals=hand.map(c=>c.value===0?'JKR':rd(c.value));
+      let formula='';
+      if(hand.length===1) formula=`${vals[0]} ＝ ${topVal}`;
+      else if(hand.length===2){
+        const[a,b]=[hand[0].value,hand[1].value];
+        const ops=[];
+        if(a+b===topVal) ops.push(`${vals[0]}＋${vals[1]}`);
+        if(Math.abs(a-b)===topVal) ops.push(`|${vals[0]}－${vals[1]}|`);
+        if(a*b===topVal) ops.push(`${vals[0]}×${vals[1]}`);
+        if(b!==0&&Math.abs(a/b-topVal)<1e-9) ops.push(`${vals[0]}÷${vals[1]}`);
+        if(a!==0&&Math.abs(b/a-topVal)<1e-9) ops.push(`${vals[1]}÷${vals[0]}`);
+        formula=ops.join(' or ')+` ＝ ${topVal}`;
+      } else {
+        formula=vals.join('＋')+` ＝ ${topVal}`;
+      }
+      eq.textContent='🎯 '+formula;
+      block.appendChild(eq);
+    }
+
+    ovHands.appendChild(block);
+  }
+
+  document.getElementById('ov').classList.add('on');
+}
+
+function newRound(){
+  document.getElementById('ov').classList.remove('on');
+  initGame();
+}
+
+// ═══════════════════════════════════
+//  STATUS / LOG
+// ═══════════════════════════════════
+function setStatus(msg,type=''){
+  const el=document.getElementById('status');
+  el.textContent=msg;
+  el.className=type?type:'';
+  el.id='status';
+}
+function addLog(msg,imp=false){
+  const la=document.getElementById('log');
+  const d=document.createElement('div');
+  d.className='le'+(imp?' imp':'');
+  d.textContent='▶ '+msg;
+  la.appendChild(d);
+  la.scrollTop=la.scrollHeight;
+  while(la.children.length>28) la.removeChild(la.firstChild);
+}
+
+// モバイル検出（iPhone Safari等）
+(function(){
+  // UA + 画面幅で厳格判定（PC誤検出防止）
+  const isMobile=/iPhone|iPod|Android/i.test(navigator.userAgent)&&window.screen.width<=500;
+  if(isMobile){
+    document.documentElement.classList.add('mobile');
+    // SafariのSVH問題対策: 実際のビューポート高さをCSS変数に
+    function setVh(){
+      document.documentElement.style.setProperty('--vh', window.innerHeight*0.01+'px');
+    }
+    setVh();
+    window.addEventListener('resize', setVh);
+    window.addEventListener('orientationchange', ()=>setTimeout(setVh,200));
+  }
+})();
+
+</script>
+</body>
+</html>
